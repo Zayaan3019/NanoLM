@@ -1,0 +1,19 @@
+# Core
+torch>=2.1.0
+numpy>=1.24.0
+tqdm>=4.65.0
+tensorboard>=2.13.0
+
+# Optional: experiment tracking
+# wandb>=0.15.0
+
+# Optional: Intel Arc GPU support (Windows/Linux)
+# intel-extension-for-pytorch>=2.1.0
+
+# Development
+pytest>=7.4.0
+pytest-cov>=4.1.0
+black>=23.0.0
+isort>=5.12.0
+ruff>=0.1.0
+tiktoken>=0.5.0   # reference-tokenizer agreement test (tests/test_tokenizer_reference.py)

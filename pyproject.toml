@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.backends.legacy:BuildBackend"
+
+[project]
+name = "nanolm"
+version = "0.1.0"
+description = "GPT-style language model trained from scratch — BPE tokenizer, Flash Attention, DDP, cosine LR"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+keywords = ["language-model", "gpt", "transformer", "bpe", "deep-learning"]
+dependencies = [
+    "torch>=2.1.0",
+    "numpy>=1.24.0",
+    "tqdm>=4.65.0",
+    "tensorboard>=2.13.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "ruff>=0.1.0",
+    "tiktoken>=0.5.0",   # reference-tokenizer agreement test (tests/test_tokenizer_reference.py)
+]
+wandb = ["wandb>=0.15.0"]
+ipex = ["intel-extension-for-pytorch>=2.1.0"]     # Intel Arc / Xe GPU support
+
+[project.scripts]
+nanolm-train    = "train:main"
+nanolm-generate = "generate:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["nanolm*"]
+
+[tool.black]
+line-length = 100
+target-version = ["py310", "py311", "py312"]
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[tool.ruff]
+line-length = 100
+select = ["E", "F", "W", "I"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"
