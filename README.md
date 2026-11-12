@@ -280,7 +280,7 @@ D_opt ∝ C^0.50
 | gpt2  | 124 M  | ~2.5 B         | ~5,200 |
 | gpt2_medium | 345 M | ~6.9 B | ~14,400 |
 
-The nano model on Shakespeare (1 M tokens) is intentionally undertrained by Chinchilla
+The nano model on Shakespeare (266K training tokens from ~1.1M characters) is intentionally undertrained by Chinchilla
 standards — this is fine for a demo; the model still learns valid language patterns.
 
 ---
@@ -303,7 +303,7 @@ But
 ```
 
 This is genuinely what the `nano` preset produces on Shakespeare with a 4096-token
-vocabulary and ~1M training tokens: recognizable structure (character names, verse-like
+vocabulary and 266K training tokens: recognizable structure (character names, verse-like
 line breaks, period-appropriate vocabulary) but not fluent, grammatical text. Do not expect
 coherent Shakespeare — see the honest numbers below.
 
@@ -340,8 +340,8 @@ python train.py --preset nano
 version of this README claimed.** That number was never reproducible from this codebase
 and has been corrected. What actually happens: the model overfits. Train loss falls
 smoothly and monotonically to 0.76 by step 5,000 while val loss falls only until step
-~1,200 and then rises for the rest of the run — on a ~900K-token training split with
-`dropout=0.0` and no early stopping, 5,000 steps revisits the data many times over.
+~1,200 and then rises for the rest of the run — on a 266K-token training split with
+`dropout=0.0` and no early stopping, 5,000 steps × 3,072 tokens is about 58 passes over the data.
 The `Trainer` already checkpoints `best.pt` on every val-loss improvement (see
 `nanolm/training/trainer.py`), so `checkpoints/best.pt` correctly holds the step-1,200
 model, not the overfit step-5,000 one — **always generate/evaluate from `best.pt`,
