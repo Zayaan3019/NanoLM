@@ -75,7 +75,7 @@ class TestOutputShapes:
         with pytest.raises(ValueError, match="Sequence length"):
             tiny_model(idx)
 
-    @pytest.mark.parametrize("preset", ["nano", "small"])
+    @pytest.mark.parametrize("preset", ["nano", "small", "gpt2", "gpt2_medium"])
     def test_preset_shapes(self, preset):
         cfg   = getattr(ModelConfig, preset)()
         model = GPT(cfg)
@@ -542,9 +542,12 @@ class TestParameterCount:
         # Nano : 6L×6H×192D, vocab=4096, seq=256  → ~3.5 M
         # Small: 12L×12H×384D, vocab=50304, seq=1024 → ~41 M
         # GPT-2: 12L×12H×768D, vocab=50304, seq=1024 → ~124 M
-        ("nano",   3.5),
-        ("small",  41.0),
-        ("gpt2",  124.0),
+        # GPT-2 Medium: 24L×16H×1024D, vocab=50304, seq=1024 → the "345M"
+        #   configuration as OpenAI published it (exact count pinned below)
+        ("nano",          3.5),
+        ("small",        41.0),
+        ("gpt2",        124.0),
+        ("gpt2_medium", 345.0),
     ])
     def test_param_count_approximate(self, preset, expected_M):
         cfg   = getattr(ModelConfig, preset)()
@@ -554,6 +557,20 @@ class TestParameterCount:
         assert abs(n / 1e6 - expected_M) / expected_M < 0.10, (
             f"{preset}: got {n/1e6:.1f}M params, expected ≈{expected_M}M"
         )
+
+
+    def test_gpt2_medium_exact_parameter_count(self):
+        """Pins the GPT-2 Medium configuration to its closed-form size.
+
+        24 blocks of (attention 4·d² + MLP 8·d² + two LayerNorm weights 2·d),
+        a tied token embedding V·d, learned positions T·d and a final
+        LayerNorm d, with d=1024, V=50304, T=1024 and no biases.
+        """
+        cfg = ModelConfig.gpt2_medium()
+        d, V, T, L = cfg.d_model, cfg.vocab_size, cfg.max_seq_len, cfg.n_layers
+        expected = L * (12 * d * d + 2 * d) + V * d + T * d + d
+        model = GPT(cfg)
+        assert sum(p.numel() for p in model.parameters()) == expected
 
 
 # ---------------------------------------------------------------------------
