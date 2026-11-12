@@ -1,5 +1,5 @@
 # Training artefacts (large binaries — never commit)
-data/
+/data/
 checkpoints/*
 !checkpoints/train_log.txt
 logs/
