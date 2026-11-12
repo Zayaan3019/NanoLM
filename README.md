@@ -240,8 +240,9 @@ L = -1/T Σ log P(token_t | token_1, ..., token_{t-1})
 
 ### Optimiser
 AdamW with decoupled weight decay (Loshchilov & Hutter, 2019):
-- Weight decay applied only to 2-D parameters (weight matrices)
-- Biases, LayerNorm γ/β, and embeddings are excluded
+- Weight decay applied to every parameter with dim ≥ 2: the weight matrices and the
+  token/position embeddings (as in nanoGPT)
+- 1-D parameters (LayerNorm weights; biases are disabled by default) are excluded
 
 ### LR schedule (cosine with warmup)
 ```

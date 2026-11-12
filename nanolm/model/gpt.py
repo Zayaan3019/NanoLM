@@ -422,8 +422,10 @@ class GPT(nn.Module):
         """
         Create AdamW with decoupled weight decay.
 
-        Only 2-D parameters (weight matrices) receive weight decay.
-        Biases, LayerNorm parameters, and embeddings are excluded.
+        Every parameter with dim >= 2 receives weight decay: the linear
+        weight matrices and also the token and position embeddings (as in
+        nanoGPT). 1-D parameters -- LayerNorm weights, and biases when
+        enabled -- are excluded.
         """
         decay:    dict[str, torch.Tensor] = {}
         no_decay: dict[str, torch.Tensor] = {}
