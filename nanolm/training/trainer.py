@@ -118,7 +118,12 @@ class Trainer:
                 pass
 
         if world_size > 1:
-            self.model = DDP(self.model, device_ids=[rank])
+            # device_ids is this process's own GPU (its local index), and must
+            # be None on CPU; the global rank is wrong on any node but the first.
+            self.model = DDP(
+                self.model,
+                device_ids=[self.device.index] if self.device.type == "cuda" else None,
+            )
 
         self._raw_model: GPT = self.model.module if world_size > 1 else self.model  # type: ignore
 
@@ -401,12 +406,36 @@ class Trainer:
 # DDP setup / teardown helpers
 # ---------------------------------------------------------------------------
 
-def setup_ddp(rank: int, world_size: int, backend: str = "nccl") -> None:
-    """Initialise the process group for DDP training."""
+def setup_ddp(
+    rank: int,
+    world_size: int,
+    backend: str = "nccl",
+    local_rank: Optional[int] = None,
+) -> torch.device:
+    """
+    Initialise the process group and return the device this process uses.
+
+    rank:       GLOBAL rank, 0..world_size-1 across every machine.
+    local_rank: index of this process on its own machine (torchrun's
+                LOCAL_RANK). That, not the global rank, picks the GPU: with
+                two 8-GPU nodes, global rank 9 is cuda:1 on the second node,
+                and cuda:9 does not exist. Defaults to $LOCAL_RANK, then rank.
+    backend:    "nccl" for GPUs, "gloo" for CPU. gloo is what the test suite
+                uses to run a real two-process job on a laptop.
+    """
     os.environ.setdefault("MASTER_ADDR", "localhost")
     os.environ.setdefault("MASTER_PORT", "12355")
+    if local_rank is None:
+        local_rank = int(os.environ.get("LOCAL_RANK", rank))
+    if backend == "nccl" and not torch.cuda.is_available():
+        raise RuntimeError(
+            "dist_backend='nccl' needs CUDA GPUs; use 'gloo' to run DDP on CPU"
+        )
     dist.init_process_group(backend=backend, rank=rank, world_size=world_size)
-    torch.cuda.set_device(rank)
+    if backend == "nccl":
+        torch.cuda.set_device(local_rank)
+        return torch.device(f"cuda:{local_rank}")
+    return torch.device("cpu")
 
 
 def teardown_ddp() -> None:

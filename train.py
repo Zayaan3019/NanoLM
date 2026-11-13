@@ -93,6 +93,9 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--dtype",           type=str,   default=None,
                    choices=["float32", "float16", "bfloat16"])
     p.add_argument("--use_wandb",       action="store_true", default=None)
+    p.add_argument("--dist_backend",    type=str,   default=None,
+                   choices=["nccl", "gloo"],
+                   help="DDP backend: nccl (GPUs) or gloo (CPU)")
     p.add_argument("--wandb_project",   type=str,   default=None)
     p.add_argument("--num_workers",     type=int,   default=None)
 
@@ -122,9 +125,6 @@ def train(
     is_ddp    = world_size > 1
     is_master = rank == 0
 
-    if is_ddp:
-        setup_ddp(rank, world_size)
-
     # ---- Build configs ---------------------------------------------------
     model_preset_fn = {
         "nano":       ModelConfig.nano,
@@ -146,6 +146,11 @@ def train(
     # seq_len must match model max_seq_len
     train_cfg.seq_len = model_cfg.max_seq_len
 
+    # ---- Process group (after the config, so dist_backend is honoured) ----
+    ddp_device = None
+    if is_ddp:
+        ddp_device = setup_ddp(rank, world_size, backend=train_cfg.dist_backend)
+
     if is_master:
         print(model_cfg)
         print(train_cfg)
@@ -159,10 +164,12 @@ def train(
     set_seed(train_cfg.seed)
 
     # ---- Device ----------------------------------------------------------
-    if args.device:
+    if is_ddp:
+        # Under DDP the process group decides: cuda:LOCAL_RANK under nccl, cpu
+        # under gloo. Honouring --device here would put every rank on cuda:0.
+        device = ddp_device
+    elif args.device:
         device = torch.device(args.device)
-    elif is_ddp:
-        device = torch.device(f"cuda:{rank}")
     else:
         device = get_device()
 

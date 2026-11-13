@@ -119,6 +119,12 @@ python train.py --preset gpt2 --dataset openwebtext --device cuda
 # Multi-GPU (4 GPUs)
 torchrun --nproc_per_node=4 train.py --preset gpt2 --dataset openwebtext
 
+# Multi-node: each process takes its GPU from LOCAL_RANK, not the global RANK
+torchrun --nnodes=2 --nproc_per_node=8 --rdzv_endpoint=HOST:29500 train.py --preset gpt2
+
+# DDP on CPU (gloo), e.g. to check the distributed path on a laptop
+torchrun --nproc_per_node=2 train.py --preset nano --dist_backend gloo
+
 # Resume from checkpoint
 python train.py --preset nano --resume checkpoints/best.pt
 ```
@@ -188,6 +194,7 @@ llm-from-scratch/
 │   ├── test_bpe.py                   # BPE unit tests + adversarial round-trip
 │   ├── test_model.py                 # Model, causal mask, KV-cache, attention numerics, optimizer
 │   ├── test_training.py              # Grad accumulation, clip order, DDP sync/sharding, seeding
+│   ├── test_ddp_cpu.py               # Real 2-process DDP run (gloo) through the Trainer
 │   ├── test_tokenizer_reference.py   # tiktoken reference-agreement comparison
 │   └── test_integration.py           # End-to-end pipeline tests
 │
@@ -393,6 +400,7 @@ pytest --cov=nanolm --cov-report=term-missing
 pytest tests/test_bpe.py -v
 pytest tests/test_model.py -v
 pytest tests/test_training.py -v
+pytest tests/test_ddp_cpu.py -v       # spawns 2 processes; ~20 s
 pytest tests/test_tokenizer_reference.py -v
 pytest tests/test_integration.py -v
 ```
